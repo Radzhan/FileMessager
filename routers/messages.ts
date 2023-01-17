@@ -1,30 +1,46 @@
 import express from 'express';
-import {promises as fs } from 'fs'
-
+import { promises as fs } from 'fs'
+import { MessageApi } from '../types';
 
 const messageRouter = express.Router();
+const path = './messages';
 const date = new Date;
+let data: MessageApi[] = [];
 
-const fileName = `${date.toISOString()}.txt`
 
-messageRouter.get('/' , (req, res) => {
-    res.send('lost 5 messaages' + date.toISOString());
-})
+messageRouter.get('/', (req, res) => {
+    const showFile = async () => {
+        const files = await fs.readdir(path);
+        const newFiles = files.slice(-5);
 
-messageRouter.post('/' , async (req, res) => {
-    const object = {
-        ...req.body,
-        date: date.toISOString(),
-    }
+        newFiles.forEach(async file => {
+            data = [];
+            try {
+                const fileContents = await fs.readFile('./messages/' + file);
+                data.push(JSON.parse(fileContents.toString()));
+            } catch (e) {
+                data = [];
+            }
+        });
+    };
+    showFile().catch(console.error);
+    res.send(data);
+});
+
+messageRouter.post('/', async (req , res) => {
+    const fileName = './messages/' + date.toISOString() + '.txt';
+    const object: MessageApi = {
+        message: req.body.message,
+        dateTime: date.toISOString(),
+    };
     const run = async () => {
         try {
-            await fs.writeFile(fileName, JSON.stringify(object))
-            console.log('file was written')
+            await fs.writeFile(fileName, JSON.stringify(object));
         } catch (err) {
-            console.log(err)
+            console.log(err);
         }
     }
-    run()
-    res.send(object) 
-})
+    run().catch(console.error);
+    res.send(object);
+});
 export default messageRouter;
